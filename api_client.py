@@ -9,6 +9,7 @@ class APIClient:
 
     # Функция для создания таблицы
     def create_table(self, table_name, columns):
+        """Функция для создания таблицы в базе данных через API."""
         url = f"{self.base_url}/create-table"
         data = {
             "table_name": table_name,
@@ -23,6 +24,7 @@ class APIClient:
 
     # Функция для получения всех данных из таблицы
     def get_data(self, table_name):
+        """Функция для получения всех данных из таблицы через API."""
         url = f"{self.base_url}/{table_name}"
         response = requests.get(url)
 
@@ -34,6 +36,7 @@ class APIClient:
 
     # Функция для добавления данных в таблицу
     def add_data(self, table_name, data):
+        """Функция для добавления данных в таблицу через API."""
         url = f"{self.base_url}/{table_name}"
         response = requests.post(url, json=data)
 
@@ -44,6 +47,7 @@ class APIClient:
 
     # Функция для обновления данных в таблице
     def update_data(self, table_name, record_id, data):
+        """Функция для обновления данных в таблице через API."""
         url = f"{self.base_url}/{table_name}/{record_id}"
         response = requests.put(url, json=data)
 
@@ -54,6 +58,7 @@ class APIClient:
 
     # Функция для удаления данных из таблицы
     def delete_data(self, table_name, record_id):
+        """Функция для удаления данных из таблицы через API."""
         url = f"{self.base_url}/{table_name}/{record_id}"
         response = requests.delete(url)
 
