@@ -13,7 +13,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 metadata = MetaData(bind=db.engine)
 
-# 🔠 Поддерживаемые типы
 SQL_TYPE_MAP = {
     'INTEGER': Integer,
     'TEXT': Text,
@@ -28,11 +27,9 @@ SQL_TYPE_MAP = {
     'NUMERIC': Numeric
 }
 
-# ✅ Проверка валидных имён
 def is_valid_identifier(name):
     return re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name)
 
-# 🚀 Эндпоинт для создания таблицы
 @app.route('/api/create-table', methods=['POST'])
 def create_table():
     data = request.get_json()
@@ -70,7 +67,6 @@ def create_table():
     except SQLAlchemyError as e:
         return jsonify({'error': str(e)}), 500
 
-# ➕ Вставка записи
 @app.route('/api/<table_name>', methods=['POST'])
 def insert_data(table_name):
     data = request.get_json()
@@ -83,7 +79,6 @@ def insert_data(table_name):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# 📤 Получение всех записей
 @app.route('/api/<table_name>', methods=['GET'])
 def get_data(table_name):
     try:
@@ -93,7 +88,6 @@ def get_data(table_name):
     except SQLAlchemyError as e:
         return jsonify({'error': str(e)}), 500
 
-# 🗑️ Удаление записи по id
 @app.route('/api/<table_name>/<int:record_id>', methods=['DELETE'])
 def delete_record(table_name, record_id):
     try:
@@ -105,7 +99,6 @@ def delete_record(table_name, record_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# 🔄 Обновление записи по id
 @app.route('/api/<table_name>/<int:record_id>', methods=['PUT'])
 def update_record(table_name, record_id):
     data = request.get_json()
@@ -118,6 +111,5 @@ def update_record(table_name, record_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# 🚀 Запуск сервера
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
