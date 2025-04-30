@@ -32,4 +32,4 @@ This project is licensed under the [GNU License](LICENSE).
 
 ## Contact
 
-For questions or feedback, please open an issue or contact the repository owner.
+For questions or feedback, please open an issue or conatct [owner](https://github.com/zarzoneieir/).
