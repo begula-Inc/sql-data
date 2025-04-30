@@ -1,108 +1,123 @@
 from flask import Flask, request, jsonify
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData, Table, Column
+from sqlalchemy import Integer, Float, String, Text, Boolean, Date, DateTime, Time, LargeBinary, Numeric
+from sqlalchemy import inspect
+from sqlalchemy.exc import SQLAlchemyError
+import re
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Функция для подключения к базе данных SQLite
-def get_db():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row  # Чтобы работать с данными как с объектами
-    return conn
+db = SQLAlchemy(app)
+metadata = MetaData(bind=db.engine)
 
-# Функция для создания таблицы по данным, переданным в теле запроса
-def create_table_from_data(table_name, columns):
-    conn = get_db()
-    cursor = conn.cursor()
+# 🔠 Поддерживаемые типы
+SQL_TYPE_MAP = {
+    'INTEGER': Integer,
+    'TEXT': Text,
+    'STRING': String,
+    'FLOAT': Float,
+    'REAL': Float,
+    'BOOLEAN': Boolean,
+    'DATE': Date,
+    'DATETIME': DateTime,
+    'TIME': Time,
+    'BLOB': LargeBinary,
+    'NUMERIC': Numeric
+}
 
-    # Строим SQL запрос для создания таблицы
-    columns_definition = ", ".join([f"{col['name']} {col['type']}" for col in columns])
-    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_definition})"
-    
-    cursor.execute(create_table_query)
-    conn.commit()
+# ✅ Проверка валидных имён
+def is_valid_identifier(name):
+    return re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name)
 
-# Эндпоинт для создания таблицы по данным, переданным в теле запроса
+# 🚀 Эндпоинт для создания таблицы
 @app.route('/api/create-table', methods=['POST'])
-def create_table_api():
-    data = request.get_json()  # Получаем данные из тела запроса
+def create_table():
+    data = request.get_json()
     table_name = data.get('table_name')
     columns = data.get('columns')
 
-    # Проверка наличия необходимых данных
-    if not table_name or not columns:
-        return jsonify({"error": "Table name and columns are required"}), 400
+    if not table_name or not isinstance(columns, list) or len(columns) == 0:
+        return jsonify({'error': 'Invalid table definition'}), 400
 
-    # Проверка правильности структуры данных
-    if not isinstance(columns, list) or len(columns) == 0:
-        return jsonify({"error": "Columns should be a non-empty list"}), 400
+    if not is_valid_identifier(table_name):
+        return jsonify({'error': 'Invalid table name'}), 400
 
-    for col in columns:
-        if 'name' not in col or 'type' not in col:
-            return jsonify({"error": "Each column must have 'name' and 'type' fields"}), 400
+    try:
+        if table_name in inspect(db.engine).get_table_names():
+            return jsonify({'error': f"Table '{table_name}' already exists"}), 400
 
-    # Создаем таблицу на основе данных
-    create_table_from_data(table_name, columns)
-    return jsonify({"message": f"Table '{table_name}' created successfully."}), 200
+        table_columns = [Column('id', Integer, primary_key=True)]
+        for col in columns:
+            name = col.get('name')
+            col_type = col.get('type', '').upper()
 
-# Эндпоинт для получения данных из таблицы (GET)
+            if not name or not col_type:
+                return jsonify({'error': 'Each column must have a name and type'}), 400
+            if not is_valid_identifier(name):
+                return jsonify({'error': f"Invalid column name '{name}'"}), 400
+            if col_type not in SQL_TYPE_MAP:
+                return jsonify({'error': f"Unsupported column type '{col_type}'"}), 400
+
+            table_columns.append(Column(name, SQL_TYPE_MAP[col_type]))
+
+        table = Table(table_name, metadata, *table_columns)
+        table.create()
+        return jsonify({'message': f"Table '{table_name}' created successfully"}), 201
+
+    except SQLAlchemyError as e:
+        return jsonify({'error': str(e)}), 500
+
+# ➕ Вставка записи
+@app.route('/api/<table_name>', methods=['POST'])
+def insert_data(table_name):
+    data = request.get_json()
+    try:
+        table = Table(table_name, metadata, autoload_with=db.engine)
+        db.session.execute(table.insert(), [data])
+        db.session.commit()
+        return jsonify({'message': 'Data inserted successfully'}), 201
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# 📤 Получение всех записей
 @app.route('/api/<table_name>', methods=['GET'])
 def get_data(table_name):
-    conn = get_db()
-    cursor = conn.cursor()
+    try:
+        table = Table(table_name, metadata, autoload_with=db.engine)
+        result = db.session.execute(table.select()).fetchall()
+        return jsonify([dict(row) for row in result])
+    except SQLAlchemyError as e:
+        return jsonify({'error': str(e)}), 500
 
-    # Получаем все данные из указанной таблицы
-    cursor.execute(f"SELECT * FROM {table_name}")
-    rows = cursor.fetchall()
-    
-    # Возвращаем данные в виде JSON
-    return jsonify([dict(row) for row in rows])
-
-# Эндпоинт для создания записи в таблице (POST)
-@app.route('/api/<table_name>', methods=['POST'])
-def create_data(table_name):
-    data = request.get_json()
-    
-    # Получаем ключи и значения для вставки
-    columns = ', '.join(data.keys())
-    values = ', '.join(['?' for _ in data.values()])
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Выполняем SQL-запрос на вставку данных в таблицу
-    cursor.execute(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", tuple(data.values()))
-    conn.commit()
-
-    return jsonify({"message": "Data inserted successfully"}), 201
-
-# Эндпоинт для удаления записи из таблицы (DELETE)
+# 🗑️ Удаление записи по id
 @app.route('/api/<table_name>/<int:record_id>', methods=['DELETE'])
-def delete_data(table_name, record_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Выполняем SQL-запрос на удаление записи
-    cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (record_id,))
-    conn.commit()
-    
-    return jsonify({"message": f"Record with ID {record_id} deleted successfully"}), 200
+def delete_record(table_name, record_id):
+    try:
+        table = Table(table_name, metadata, autoload_with=db.engine)
+        db.session.execute(table.delete().where(table.c.id == record_id))
+        db.session.commit()
+        return jsonify({'message': f"Record {record_id} deleted"}), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-# Эндпоинт для обновления записи в таблице (PUT)
+# 🔄 Обновление записи по id
 @app.route('/api/<table_name>/<int:record_id>', methods=['PUT'])
-def update_data(table_name, record_id):
+def update_record(table_name, record_id):
     data = request.get_json()
-    
-    # Строим запрос на обновление
-    set_clause = ', '.join([f"{key} = ?" for key in data.keys()])
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Выполняем SQL-запрос на обновление записи
-    cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE id = ?", (*data.values(), record_id))
-    conn.commit()
-    
-    return jsonify({"message": f"Record with ID {record_id} updated successfully"}), 200
+    try:
+        table = Table(table_name, metadata, autoload_with=db.engine)
+        db.session.execute(table.update().where(table.c.id == record_id).values(**data))
+        db.session.commit()
+        return jsonify({'message': f"Record {record_id} updated"}), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
+# 🚀 Запуск сервера
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
