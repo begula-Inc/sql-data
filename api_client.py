@@ -5,12 +5,16 @@ import json
 
 class APIClient:
     def __init__(self, base_url):
-        """Инициализация клиента API с базовым URL."""
+        """Инициализация клиента API с базовым URL.
+        base_url: str - базовый URL API, например, "http://localhost:5000/api"""
         self.base_url = base_url
 
     # Функция для создания таблицы
     def create_table(self, table_name, columns):
-        """Функция для создания таблицы в базе данных через API."""
+        """Функция для создания таблицы в базе данных через API.
+        table_name: str - имя таблицы, которую нужно создать
+        columns: list - список столбцов, которые нужно создать в таблице
+        """
         url = f"{self.base_url}/create-table"
         data = {
             "table_name": table_name,
@@ -25,7 +29,10 @@ class APIClient:
 
     # Функция для получения всех данных из таблицы
     def get_data(self, table_name):
-        """Функция для получения всех данных из таблицы через API."""
+        """Функция для получения всех данных из таблицы через API.
+        table_name: str - имя таблицы, из которой нужно получить данные
+        Возвращает список словарей с данными из таблицы.
+        """
         url = f"{self.base_url}/{table_name}"
         response = requests.get(url)
 
@@ -37,7 +44,10 @@ class APIClient:
 
     # Функция для добавления данных в таблицу
     def add_data(self, table_name, data):
-        """Функция для добавления данных в таблицу через API."""
+        """Функция для добавления данных в таблицу через API.
+        table_name: str - имя таблицы, в которую нужно добавить данные
+        data: dict - данные для добавления в таблицу
+        """
         url = f"{self.base_url}/{table_name}"
         response = requests.post(url, json=data)
 
@@ -48,7 +58,9 @@ class APIClient:
 
     # Функция для обновления данных в таблице
     def update_data(self, table_name, record_id, data):
-        """Функция для обновления данных в таблице через API."""
+        """Функция для обновления данных в таблице через API.
+        table_name: str - имя таблицы, в которой нужно обновить данные
+        record_id: int - ID записи, которую нужно обновить"""
         url = f"{self.base_url}/{table_name}/{record_id}"
         response = requests.put(url, json=data)
 
@@ -59,7 +71,9 @@ class APIClient:
 
     # Функция для удаления данных из таблицы
     def delete_data(self, table_name, record_id):
-        """Функция для удаления данных из таблицы через API."""
+        """Функция для удаления данных из таблицы через API.
+        table_name: str - имя таблицы, из которой нужно удалить данные
+        record_id: int - ID записи, которую нужно удалить"""
         url = f"{self.base_url}/{table_name}/{record_id}"
         response = requests.delete(url)
 
