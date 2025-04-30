@@ -5,6 +5,7 @@ import json
 
 class APIClient:
     def __init__(self, base_url):
+        """Инициализация клиента API с базовым URL."""
         self.base_url = base_url
 
     # Функция для создания таблицы
