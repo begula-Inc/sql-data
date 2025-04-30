@@ -2,82 +2,76 @@ import requests
 import json
 
 
-
 class APIClient:
-    def __init__(self, base_url):
-        """Инициализация клиента API с базовым URL.
-        base_url: str - базовый URL API, например, "http://localhost:5000/api"""
-        self.base_url = base_url
+    def __init__(self, base_url: str):
+        """Инициализация клиента API с базовым URL."""
+        self.base_url = base_url.rstrip("/")
 
-    # Функция для создания таблицы
-    def create_table(self, table_name, columns):
-        """Функция для создания таблицы в базе данных через API.
-        table_name: str - имя таблицы, которую нужно создать
-        columns: list - список столбцов, которые нужно создать в таблице
-        """
+    def _handle_response(self, response):
+        try:
+            data = response.json()
+        except ValueError:
+            data = response.text
+        if response.ok:
+            return data
+        else:
+            print(f"[{response.status_code}] {data}")
+            return None
+
+    def create_table(self, table_name: str, columns: list[dict]):
+        """Создание таблицы в базе данных через API."""
         url = f"{self.base_url}/create-table"
         data = {
             "table_name": table_name,
             "columns": columns
         }
+        try:
+            response = requests.post(url, json=data)
+            result = self._handle_response(response)
+            if result:
+                print(f"✅ Table '{table_name}' created.")
+        except requests.RequestException as e:
+            print(f"Request error: {e}")
 
-        response = requests.post(url, json=data)
-        if response.status_code == 200:
-            print(f"Table '{table_name}' created successfully.")
-        else:
-            print(f"Failed to create table: {response.json()}")
-
-    # Функция для получения всех данных из таблицы
-    def get_data(self, table_name):
-        """Функция для получения всех данных из таблицы через API.
-        table_name: str - имя таблицы, из которой нужно получить данные
-        Возвращает список словарей с данными из таблицы.
-        """
+    def get_data(self, table_name: str):
+        """Получение всех данных из таблицы."""
         url = f"{self.base_url}/{table_name}"
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get data: {response.json()}")
+        try:
+            response = requests.get(url)
+            return self._handle_response(response)
+        except requests.RequestException as e:
+            print(f"Request error: {e}")
             return None
 
-    # Функция для добавления данных в таблицу
-    def add_data(self, table_name, data):
-        """Функция для добавления данных в таблицу через API.
-        table_name: str - имя таблицы, в которую нужно добавить данные
-        data: dict - данные для добавления в таблицу
-        """
+    def add_data(self, table_name: str, data: dict):
+        """Добавление новой записи в таблицу."""
         url = f"{self.base_url}/{table_name}"
-        response = requests.post(url, json=data)
+        try:
+            response = requests.post(url, json=data)
+            result = self._handle_response(response)
+            if result:
+                print(f"✅ Data added to '{table_name}'.")
+        except requests.RequestException as e:
+            print(f"Request error: {e}")
 
-        if response.status_code == 201:
-            print(f"Data added to '{table_name}' successfully.")
-        else:
-            print(f"Failed to add data: {response.json()}")
-
-    # Функция для обновления данных в таблице
-    def update_data(self, table_name, record_id, data):
-        """Функция для обновления данных в таблице через API.
-        table_name: str - имя таблицы, в которой нужно обновить данные
-        record_id: int - ID записи, которую нужно обновить"""
+    def update_data(self, table_name: str, record_id: int, data: dict):
+        """Обновление записи по ID."""
         url = f"{self.base_url}/{table_name}/{record_id}"
-        response = requests.put(url, json=data)
+        try:
+            response = requests.put(url, json=data)
+            result = self._handle_response(response)
+            if result:
+                print(f"✅ Record {record_id} in '{table_name}' updated.")
+        except requests.RequestException as e:
+            print(f"Request error: {e}")
 
-        if response.status_code == 200:
-            print(f"Data in record {record_id} updated successfully.")
-        else:
-            print(f"Failed to update data: {response.json()}")
-
-    # Функция для удаления данных из таблицы
-    def delete_data(self, table_name, record_id):
-        """Функция для удаления данных из таблицы через API.
-        table_name: str - имя таблицы, из которой нужно удалить данные
-        record_id: int - ID записи, которую нужно удалить"""
+    def delete_data(self, table_name: str, record_id: int):
+        """Удаление записи по ID."""
         url = f"{self.base_url}/{table_name}/{record_id}"
-        response = requests.delete(url)
-
-        if response.status_code == 200:
-            print(f"Record {record_id} deleted from '{table_name}' successfully.")
-        else:
-            print(f"Failed to delete data: {response.json()}")
+        try:
+            response = requests.delete(url)
+            result = self._handle_response(response)
+            if result:
+                print(f"✅ Record {record_id} deleted from '{table_name}'.")
+        except requests.RequestException as e:
+            print(f"Request error: {e}")
