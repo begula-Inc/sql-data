@@ -1,0 +1,5 @@
+pipka_zirka = True
+if pipka_zirka:
+    print('huyna ebannaya')
+else:
+    print('ne huyna ebannaya')
